@@ -24,7 +24,6 @@ public sealed class Program
         string serviceVersion = ServiceConstants.ServiceVersion;
         const string serviceInstanceId = "instance-1";
 
-
         var resourceBuilder = ResourceBuilder.CreateDefault()
             .AddService(serviceName, serviceNamespace, serviceVersion, autoGenerateServiceInstanceId: false, serviceInstanceId: serviceInstanceId);
 
@@ -65,6 +64,8 @@ public sealed class Program
         var queueName = "rheum-queue";
 
         builder.Services.AddRebus(configure => configure.Transport(transport => transport.UseKafka(connectionString, queueName)));
+
+        builder.Services.AddSingleton(TimeProvider.System);
 
         var app = builder.Build();
 

@@ -20,4 +20,8 @@
     <PackageReference Include="Rebus.Kafka" Version="5.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Shared\Rheum.Shared.csproj" />
+  </ItemGroup>
+
 </Project>
