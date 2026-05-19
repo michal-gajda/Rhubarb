@@ -1,0 +1,13 @@
+services:
+  web:
+    build: .
+    image: gajdaltd/rhubarb:latest
+    container_name: web
+    ports:
+      - "5080:5080"
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://host.docker.internal:4318
+      - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
