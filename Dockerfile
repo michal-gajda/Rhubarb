@@ -1,6 +1,8 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
+COPY ./nuget.config .
+COPY ./packages ./packages
 COPY src/Shared/Rheum.Shared.csproj Shared/Rheum.Shared.csproj
 COPY src/Web/Rhubarb.Web.csproj Web/Rhubarb.Web.csproj
 RUN dotnet new sln --name Rhubarb

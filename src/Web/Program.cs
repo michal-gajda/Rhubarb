@@ -1,5 +1,7 @@
 namespace Rhubarb.Web;
 
+using HealthChecks.UI.Client;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -7,6 +9,7 @@ using OpenTelemetry.Trace;
 using Rebus.Config;
 using Rebus.Handlers;
 using Rebus.Kafka;
+using Rebus.OpenTelemetry.Configuration;
 using Rheum.Shared;
 
 public sealed class Program
@@ -19,12 +22,17 @@ public sealed class Program
     {
         var builder = WebApplication.CreateBuilder(args);
 
-        builder.Services.AddHealthChecks();
+        builder.Services
+            .AddHealthChecks()
+            .AddKafka(options =>
+            {
+                options.BootstrapServers = builder.Configuration.GetConnectionString("Kafka");
+            });
 
         string serviceName = ServiceConstants.ServiceName;
-        const string serviceNamespace = "Rheum";
+        const string serviceNamespace = "Rhubarb";
         string serviceVersion = ServiceConstants.ServiceVersion;
-        const string serviceInstanceId = "instance-1";
+        string serviceInstanceId = Environment.GetEnvironmentVariable("HOSTNAME") ?? Environment.MachineName;
 
         var resourceBuilder = ResourceBuilder.CreateDefault()
             .AddService(serviceName, serviceNamespace, serviceVersion, autoGenerateServiceInstanceId: false, serviceInstanceId: serviceInstanceId);
@@ -48,7 +56,7 @@ public sealed class Program
                     options.Filter = context => !context.Request.Path.StartsWithSegments("/health");
                 })
                 .AddHttpClientInstrumentation(options => options.RecordException = true)
-                .AddRhubarbInstrumentation()
+                .AddRebusInstrumentation()
                 .AddRhubarbInstrumentation()
                 .AddOtlpExporter())
             .WithMetrics(metrics => metrics
@@ -56,7 +64,7 @@ public sealed class Program
                 .AddAspNetCoreInstrumentation()
                 .AddHttpClientInstrumentation()
                 .AddProcessInstrumentation()
-                .AddRhubarbInstrumentation()
+                .AddRebusInstrumentation()
                 .AddRhubarbInstrumentation()
                 .AddRuntimeInstrumentation()
                 .AddOtlpExporter());
@@ -66,15 +74,20 @@ public sealed class Program
         var queueName = "ping-service-topic";
 
         builder.Services.AddTransient<IHandleMessages<Ping>, PingHandler>();
-        builder.Services.AddRebus(configure => configure.Transport(transport => transport.UseKafka(connectionString, queueName)));
+        builder.Services.AddRebus(configure => configure
+            .Transport(transport => transport.UseKafka(connectionString, queueName))
+            .Options(options => options.EnableDiagnosticSources())
+        );
         builder.Services.AutoRegisterHandlersFromAssemblyOf<PingHandler>();
 
         builder.Services.AddSingleton(TimeProvider.System);
 
         var app = builder.Build();
 
-        app.UseHealthChecks("/healthz");
-
+        app.MapHealthChecks("/healthz", new HealthCheckOptions
+        {
+            ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+        });
         await app.RunAsync();
 
         return Environment.ExitCode;
