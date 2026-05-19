@@ -15,6 +15,6 @@ public sealed class PingHandler(IBus bus, ILogger<PingHandler> logger, TimeProvi
         var pong = new Pong { Message = $"{message.Message} => {dateTime.Ticks}" };
         logger.LogInformation("Sending pong: {Message}", pong.Message);
 
-        await bus.Publish(pong);
+        await bus.Reply(pong);
     }
 }

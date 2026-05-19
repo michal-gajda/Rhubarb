@@ -5,7 +5,9 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Rebus.Config;
+using Rebus.Handlers;
 using Rebus.Kafka;
+using Rheum.Shared;
 
 public sealed class Program
 {
@@ -61,9 +63,11 @@ public sealed class Program
 
         var configuration = builder.Configuration;
         var connectionString = configuration.GetConnectionString("Kafka");
-        var queueName = "rheum-queue";
+        var queueName = "ping-service-topic";
 
+        builder.Services.AddTransient<IHandleMessages<Ping>, PingHandler>();
         builder.Services.AddRebus(configure => configure.Transport(transport => transport.UseKafka(connectionString, queueName)));
+        builder.Services.AutoRegisterHandlersFromAssemblyOf<PingHandler>();
 
         builder.Services.AddSingleton(TimeProvider.System);
 
